@@ -210,6 +210,250 @@ void            RobotPlayer::doUpdate(float dt)
 }
 **/
 
+
+/*Start of Flocking Code*/
+float          RobotPlayer::getCenterOfMass(float hoodSize, float teamCom[3])
+{
+    if (isAlive())
+    {
+        //Line here to find this robot's team myTeam
+        TeamColor myTeam = getTeam();
+        //Size of team/nearest team members
+        float myTeamSize = 0;
+        //my position
+        const float* myPos = getPosition();
+        //position of other players
+        const float* pPos;
+        //position arrays to sum positions
+        float teamCom[3] = { 0 };
+        for (int t = 0; t <= World::getWorld()->getCurMaxPlayers(); t++)
+        {
+            Player* p = 0;
+            //distance of current robot to found teammate
+            double dist = 0;
+            if (World::getWorld()->getPlayer(t) != NULL)
+            {
+                //Find a tank
+                if (t < World::getWorld()->getCurMaxPlayers())
+                    p = World::getWorld()->getPlayer(t);
+                else
+                    p = LocalPlayer::getMyTank();
+                if (!p || p->getId() == getId())
+                    continue;
+                //What team is the tank
+                TeamColor team = p->getTeam();
+                //Is this tank on my team check
+                if (team == myTeam)
+                {
+                    //record its position
+                    pPos = p->getPosition();
+                    double x = pPos[0] - myPos[0];
+                    double y = pPos[1] - myPos[1];
+                    dist = hypotf(x, y);
+
+                    if (dist < hoodSize)
+                    {
+                        teamCom[0] = teamCom[0] + pPos[0];
+                        teamCom[1] = teamCom[1] + pPos[1];
+                        teamCom[2] = teamCom[2] + pPos[2];
+                        //count the team
+                        myTeamSize += 1;
+                    }
+                }
+            }
+        }
+        teamCom[0] = teamCom[0] / myTeamSize;
+        teamCom[1] = teamCom[1] / myTeamSize;
+        teamCom[2] = teamCom[2] / myTeamSize;
+    }
+    return hoodSize;
+}
+
+//Again similar to CoM
+float          RobotPlayer::getAlignment(float hoodSize, float teamAlign[3], float* avgAzi)
+{
+    if (isAlive())
+    {
+        //we do this again.
+        float teamAlign[3] = { 0 };
+        const float* myPos = getPosition();
+        int myTeamSize = 0;
+        TeamColor myTeam = getTeam();
+        *avgAzi = 0;
+        //for loop again
+        for (int t = 0; t <= World::getWorld()->getCurMaxPlayers(); t++)
+        {
+            //moar repeats
+            Player* p = 0;
+            const float* pPos;
+            //some thing dif v for velocity since we're aligning
+            const float* v;
+            //moar repeats
+            double dist = 0;
+            //do moar repeats
+            if (World::getWorld()->getPlayer(t) != NULL)
+            {
+                //Find a tank
+                if (t < World::getWorld()->getCurMaxPlayers())
+                {
+                    p = World::getWorld()->getPlayer(t);
+                }
+                else
+                {
+                    p = LocalPlayer::getMyTank();
+                }
+                if (!p || p->getId() == getId())
+                {
+                    continue;
+                }
+
+                //What team is the tank
+                TeamColor team = p->getTeam();
+                if (team == myTeam)
+                {
+                    pPos = p->getPosition();
+                    double x = pPos[0] - myPos[0];
+                    double y = pPos[1] - myPos[1];
+                    dist = hypotf(x, y);
+                    v = p->getVelocity();
+                }
+                if (dist < hoodSize)
+                {
+                    teamAlign[0] = teamAlign[0] + v[0];
+                    teamAlign[1] = teamAlign[1] + v[1];
+                    teamAlign[2] = teamAlign[2] + v[2];
+                    //count the team
+                    myTeamSize += 1;
+                    avgAzi = avgAzi + p->getAngle();
+                }
+            }
+        }
+        teamAlign[0] = teamAlign[0] / myTeamSize;
+        teamAlign[1] = teamAlign[1] / myTeamSize;
+        teamAlign[2] = teamAlign[2] / myTeamSize;
+    }
+    return hoodSize;
+}
+
+//yet again code will be similar to CoM
+float          RobotPlayer::getSeparation(float hoodSize, float teamSep[3])
+{
+    //is isAlive() actually needed?
+    if (isAlive())
+    {
+        //moar of the same
+        float teamSep[3] = { 0 };
+        float avoid[3] = { 0 };
+        const float* myPos = getPosition();
+        int myTeamSize = 0;
+        TeamColor myTeam = getTeam();
+        for (int t = 0; t <= World::getWorld()->getCurMaxPlayers(); t++)
+        {
+            Player* p = 0;
+            //robot p's position
+            const float* pPos;
+            //distance of current robot to found teammate
+            double dist = 0;
+            if (World::getWorld()->getPlayer(t) != NULL)
+            {
+                //Find a tank
+                if (t < World::getWorld()->getCurMaxPlayers())
+                    p = World::getWorld()->getPlayer(t);
+                else
+                    p = LocalPlayer::getMyTank();
+                if (!p || p->getId() == getId())
+                    continue;
+                //What team is the tank
+                TeamColor team = p->getTeam();
+                if (team == myTeam)
+                {
+                    pPos = p->getPosition();
+                    avoid[0] = myPos[0] - pPos[0];
+                    avoid[1] = myPos[1] - pPos[1];
+                    dist = hypotf(avoid[0], avoid[1]);
+                    if (dist == 0)
+                    {
+                        dist = 0.01;
+                        avoid[0] = myPos[1] - pPos[1];
+                        avoid[1] = myPos[0] - pPos[0];
+                    }
+                    if (dist < hoodSize)
+                    {
+                        float ddist = dist * dist;
+                        teamSep[0] = teamSep[0] + (avoid[0] / ddist);
+                        teamSep[1] = teamSep[1] + (avoid[1] / ddist);
+                        teamSep[2] = teamSep[2] + (avoid[2] / ddist);
+                        //count the team
+                        myTeamSize += 1;
+                    }
+                }
+            }
+        }
+    }
+    return hoodSize;
+}
+/*End of Flocking Code*/
+
+//Calculates the location of the home base
+void           RobotPlayer::getMyBase(TeamColor teamColor, float location[3])
+{
+    const float* baseParms = World::getWorld()->getBase(teamColor, 0);
+    location[0] = baseParms[0];
+    location[1] = baseParms[1];
+    location[2] = baseParms[2];
+}
+
+bool            RobotPlayer::keepFlag()
+{
+    FlagType* flagType = Player::getFlag();
+    const float* playerPosition = Player::getPosition();
+    const PlayerId pid = Player::getId();
+
+    //If it is sticky flag, cannot be dropped, so return true
+    if (flagType->endurance == FlagSticky)
+    {
+        return true;
+    }
+
+    //If it is the same color as own team, drop it and return false
+    if (flagType->flagTeam == Player::getTeam())
+    {
+        //Drop flag
+        serverLink->sendDropFlag(pid, playerPosition);
+        return false;
+    }
+
+    //Any other flag we keep
+    return true;
+}
+
+void            RobotPlayer::findFlag(float location[3])
+{
+    World* myWorld = World::getWorld();
+    TeamColor myColor = getTeam();
+
+    //Check if the world allow team flag or not first
+    if (!myWorld->allowTeamFlags())
+    {
+        return;
+    }
+
+    //Loop through the entire world of flags
+    for (int i = 0; i < myWorld->getMaxFlags(); i++)
+    {
+        //Initialize flag
+        Flag& flag = myWorld->getFlag(i);
+        //Check if flag belongs to anyone
+        TeamColor flagColor = flag.type->flagTeam;
+        if (flagColor != myColor && flagColor != NoTeam)
+        {
+            location[0] = flag.position[0];
+            location[1] = flag.position[1];
+            location[2] = flag.position[2];
+        }
+    }
+}
+
 void            RobotPlayer::doUpdateMotion(float dt)
 {
     if (isAlive())
@@ -225,30 +469,12 @@ void            RobotPlayer::doUpdateMotion(float dt)
         float azimuth = oldAzimuth;
         float tankAngVel = BZDB.eval(StateDatabase::BZDB_TANKANGVEL);
         float tankSpeed = BZDBCache::tankSpeed;
-        float centerOfMass = 0;
-        float currPos = 0;
-
-        //Find location of the base
-        int _team = 0; //Change this line for it to make sense
-        int base = 0; //Keep base 0 for now
-        const float* BaseParms = World::getWorld()->getBase(_team, base);
+        const TeamColor myTeam = Player::getTeam();
 
         // basically a clone of Roger's evasive code
         for (int t = 0; t <= World::getWorld()->getCurMaxPlayers(); t++)
         {
             Player* p = 0;
-            int playerCount = 0;
-            //Get Center of Mass (Jiajun Kang)
-            if (World::getWorld()->getPlayer(t) != NULL)
-            {
-                const float* getPos = World::getWorld()->getPlayer(t)->getPosition();
-                currPos = getPos[0];
-                centerOfMass += currPos;
-                playerCount++;
-            }
-
-            //Center of mass being the sum of all mass divided by the player
-            centerOfMass = centerOfMass / playerCount;
 
             if (t < World::getWorld()->getCurMaxPlayers())
                 p = World::getWorld()->getPlayer(t);
@@ -304,14 +530,53 @@ void            RobotPlayer::doUpdateMotion(float dt)
         }
 
         // when we are not evading, go to the center of mass
-        if (!evading && dt > 0.0 && pathIndex < (int)path.size())
+        if (!evading && dt > 0.0)
         { 
             float distance;
             float v[2];
-            const float* endPoint = path[pathIndex].get();
+            float com[3];
+            float cohesion[2];
+            float separation[3];
+            float align[3];
+            float alignAzi;
+            float path[3];
+            float hoodSize = BZDBCache::tankRadius;
+            float coNeighbors = RobotPlayer::getCenterOfMass(hoodSize * 10, com);
+            float sepNeighbors = RobotPlayer::getSeparation(hoodSize * 10, separation);
+            float alignNeighbors = RobotPlayer::getAlignment(hoodSize * 10, align, &alignAzi);
+
+            //Check if there are any neighbors
+            if (coNeighbors == 0)
+            {
+                //If no neighbors, keep the values as 0
+                cohesion[0] = cohesion[1] = 0;
+            }
+            else
+            {
+                //If there are neighbors, 
+                cohesion[0] = com[0] - position[0];
+                cohesion[1] = com[1] - position[1];
+            }
+
+            //If the tank is holding any flags and if its worth keeping
+            if (RobotPlayer::getFlag() != NULL && RobotPlayer::keepFlag())
+            {
+                //Set our goal as our home base
+                getMyBase(myTeam, path);
+                path[0] = path[0] - position[0];
+                path[1] = path[1] - position[1];
+            }
+            //If there are no flags, go find it
+            else 
+            {
+                findFlag(path);
+                path[0] = path[0] - position[0];
+                path[1] = path[1] - position[1];
+            }
+
             // find how long it will take to get to next path segment
-            v[0] = endPoint[0] - position[0];
-            v[1] = endPoint[1] - position[1];
+            //v[0] = endPoint[0] - position[0];
+            //v[1] = endPoint[1] - position[1];
             distance = hypotf(v[0], v[1]);
             float tankRadius = BZDBCache::tankRadius;
 
@@ -361,24 +626,6 @@ void            RobotPlayer::doUpdateMotion(float dt)
                 }
                 else
                     setDesiredSpeed(1.0f);
-            }
-        }
-
-        //Drop flag if carrying one
-        if (Player::getFlag() != NULL)
-        {
-            FlagType* ft = Player::getFlag();
-            const float* playerPosition = Player::getPosition();
-            const PlayerId pid = Player::getId();
-            //Make sure it is not the sticky flag
-            if (ft->endurance != FlagSticky)
-            {
-                //If there are no team, or it is the same color as own team
-                if (ft->flagTeam == NoTeam || ft->flagTeam == Player::getTeam())
-                {
-                    //Drop flag
-                    serverLink->sendDropFlag(pid, playerPosition);
-                }
             }
         }
     }
