@@ -28,6 +28,11 @@
 
 std::vector<BzfRegion*>* RobotPlayer::obstacleList = NULL;
 
+const float RobotPlayer::CohesionVector = 1.0f;
+const float RobotPlayer::SeparationVector = 1000.0f;
+const float RobotPlayer::AlignVector = 1.0f;
+const float RobotPlayer::PathVector = 10.0f;
+
 RobotPlayer::RobotPlayer(const PlayerId& _id, const char* _name,
     ServerLink* _server,
     const char* _motto = "") :
@@ -123,8 +128,7 @@ void RobotPlayer::getProjectedPosition(const Player* targ, float* projpos) const
     }
 }
 
-/*
-* Keep this commented out for now, this only change the shooting mechanic, which we currently don't need
+
 void            RobotPlayer::doUpdate(float dt)
 {
     LocalPlayer::doUpdate(dt);
@@ -208,7 +212,6 @@ void            RobotPlayer::doUpdate(float dt)
         }
     }
 }
-**/
 
 
 /*Start of Flocking Code*/
@@ -274,23 +277,17 @@ float          RobotPlayer::getAlignment(float hoodSize, float teamAlign[3], flo
 {
     if (isAlive())
     {
-        //we do this again.
         float teamAlign[3] = { 0 };
         const float* myPos = getPosition();
         int myTeamSize = 0;
         TeamColor myTeam = getTeam();
         *avgAzi = 0;
-        //for loop again
         for (int t = 0; t <= World::getWorld()->getCurMaxPlayers(); t++)
         {
-            //moar repeats
-            Player* p = 0;
+            Player* p = NULL;
             const float* pPos;
-            //some thing dif v for velocity since we're aligning
-            const float* v;
-            //moar repeats
+            const float* velocity;
             double dist = 0;
-            //do moar repeats
             if (World::getWorld()->getPlayer(t) != NULL)
             {
                 //Find a tank
@@ -302,30 +299,27 @@ float          RobotPlayer::getAlignment(float hoodSize, float teamAlign[3], flo
                 {
                     p = LocalPlayer::getMyTank();
                 }
-                if (!p || p->getId() == getId())
-                {
-                    continue;
-                }
-
                 //What team is the tank
                 TeamColor team = p->getTeam();
-                if (team == myTeam)
+                if (team == myTeam && p->getId() != getId())
                 {
                     pPos = p->getPosition();
                     double x = pPos[0] - myPos[0];
                     double y = pPos[1] - myPos[1];
                     dist = hypotf(x, y);
-                    v = p->getVelocity();
+                    velocity = p->getVelocity();
+
+                    if (dist < hoodSize)
+                    {
+                        teamAlign[0] = teamAlign[0] + velocity[0];
+                        teamAlign[1] = teamAlign[1] + velocity[1];
+                        teamAlign[2] = teamAlign[2] + velocity[2];
+                        //count the team
+                        myTeamSize += 1;
+                        *avgAzi = *avgAzi + p->getAngle();
+                    }
                 }
-                if (dist < hoodSize)
-                {
-                    teamAlign[0] = teamAlign[0] + v[0];
-                    teamAlign[1] = teamAlign[1] + v[1];
-                    teamAlign[2] = teamAlign[2] + v[2];
-                    //count the team
-                    myTeamSize += 1;
-                    avgAzi = avgAzi + p->getAngle();
-                }
+
             }
         }
         teamAlign[0] = teamAlign[0] / myTeamSize;
@@ -353,7 +347,7 @@ float          RobotPlayer::getSeparation(float hoodSize, float teamSep[3])
             //robot p's position
             const float* pPos;
             //distance of current robot to found teammate
-            double dist = 0;
+            float dist = 0;
             if (World::getWorld()->getPlayer(t) != NULL)
             {
                 //Find a tank
@@ -373,13 +367,13 @@ float          RobotPlayer::getSeparation(float hoodSize, float teamSep[3])
                     dist = hypotf(avoid[0], avoid[1]);
                     if (dist == 0)
                     {
-                        dist = 0.01;
+                        dist = 0.001f;
                         avoid[0] = myPos[1] - pPos[1];
                         avoid[1] = myPos[0] - pPos[0];
                     }
                     if (dist < hoodSize)
                     {
-                        float ddist = dist * dist;
+                        float ddist = dist * dist * dist;
                         teamSep[0] = teamSep[0] + (avoid[0] / ddist);
                         teamSep[1] = teamSep[1] + (avoid[1] / ddist);
                         teamSep[2] = teamSep[2] + (avoid[2] / ddist);
@@ -533,7 +527,7 @@ void            RobotPlayer::doUpdateMotion(float dt)
         if (!evading && dt > 0.0)
         { 
             float distance;
-            float v[2];
+            float velocity[2];
             float com[3];
             float cohesion[2];
             float separation[3];
@@ -574,10 +568,12 @@ void            RobotPlayer::doUpdateMotion(float dt)
                 path[1] = path[1] - position[1];
             }
 
-            // find how long it will take to get to next path segment
-            //v[0] = endPoint[0] - position[0];
-            //v[1] = endPoint[1] - position[1];
-            distance = hypotf(v[0], v[1]);
+            velocity[0] = CohesionVector * cohesion[0] + SeparationVector * separation[0] + AlignVector * align[0] + PathVector * path[0];
+            velocity[1] = CohesionVector * cohesion[1] + SeparationVector * separation[1] + AlignVector * align[1] + PathVector * path[1];
+            float totalWeight = CohesionVector + SeparationVector + AlignVector + PathVector;
+            velocity[0] = velocity[0] / totalWeight;
+            velocity[1] = velocity[1] / totalWeight;
+            distance = hypotf(velocity[0], velocity[1]);
             float tankRadius = BZDBCache::tankRadius;
 
             // smooth path a little by turning early at corners, might get us stuck, though
@@ -586,7 +582,7 @@ void            RobotPlayer::doUpdateMotion(float dt)
                 pathIndex++;
             }
 
-            float segmentAzimuth = atan2f(v[1], v[0]);
+            float segmentAzimuth = atan2f(velocity[1], velocity[0]);
             float azimuthDiff = segmentAzimuth - azimuth;
             if (azimuthDiff > M_PI)
             {

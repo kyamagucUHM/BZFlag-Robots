@@ -38,6 +38,11 @@ public:
                 const char* name, ServerLink*,
                 const char* _motto);
 
+    static const float CohesionVector;
+    static const float SeparationVector;
+    static const float AlignVector;
+    static const float PathVector;
+
     float       getTargetPriority(const Player*) const;
     const Player*   getTarget() const;
     void        setTarget(const Player*);
@@ -53,7 +58,7 @@ private:
     void getMyBase(TeamColor teamColor, float location[3]);
     bool keepFlag();
     void findFlag(float location[3]);
-    //void        doUpdate(float dt);
+    void        doUpdate(float dt);
     void        doUpdateMotion(float dt);
     BzfRegion*      findRegion(const float p[2], float nearest[2]) const;
     float       getRegionExitPoint(
