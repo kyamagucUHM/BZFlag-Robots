@@ -4,11 +4,14 @@
 * Modified by Jiajun Kang
 */
 
+//Windows only. Increase Stack size to stop stack overflow
+#pragma comment(linker, "/STACK:2000000")
+
 //Astar Header file
-#include "Astar.h";
+#include "Astar.h"
 
 //BZFlag files
-#include "World.h";
+#include "World.h"
 #include "BZDBCache.h"
 #include "playing.h"
 #include <stack>
@@ -18,7 +21,7 @@ using namespace std;
 
 World* world = World::getWorld();
 const float worldSize = BZDBCache::worldSize;
-const float grid[200][200];
+float grid[186][186];
 
 // A Utility Function to check whether given cell (row, col) 
 // is a valid cell or not. 
@@ -59,11 +62,20 @@ double Astar::calculateHValue(int row, int col, Pair dest)
         + (col - dest.second) * (col - dest.second)));
 }
 
+/*//Calculate our own h value based on BZFlag Map
+double Astar::calcBZH(float pos[3], float dest[3])
+{
+    float path[3];
+    path[0] = dest[0] - pos[0];
+    path[1] = dest[1] - pos[1];
+    return hypotf(path[0], path[1]);
+}*/
+
 // A Utility Function to trace the path from the source 
 // to destination 
 float *Astar::tracePath(cell cellDetails[][COL], Pair dest)
 {
-    float* path = new float[50];
+    float *path = new float[3];
     //printf("\nThe Path is ");
     int row = dest.first;
     int col = dest.second;
@@ -81,16 +93,14 @@ float *Astar::tracePath(cell cellDetails[][COL], Pair dest)
     }
 
     Path.push(make_pair(row, col));
-    int i = 0;
-    while (!Path.empty() && i < 50)
+    while (!Path.empty())
     {
         pair<int, int> p = Path.top();
-        path[i] = Path.top;
+        path[0] = p.first;
+        path[1] = p.second;
         Path.pop();
         //printf("-> (%d,%d) ", p.first, p.second);
-        i++;
     }
-
     return path;
 }
 
@@ -99,8 +109,11 @@ float *Astar::tracePath(cell cellDetails[][COL], Pair dest)
 // to A* Search Algorithm 
 float* Astar::aStarSearch(int grid[][COL], Pair src, Pair dest)
 {
-    float* path = new float[50];
-    path = {};
+    float *path = new float[3];
+    //grab pair dest as a float position
+    float flag[3];
+    flag[0] = dest.first;
+    flag[1] = dest.second;
 
     // If the source is out of range 
     if (isValid(src.first, src.second) == false)
@@ -243,7 +256,7 @@ float* Astar::aStarSearch(int grid[][COL], Pair src, Pair dest)
                 hNew = calculateHValue(i - 1, j, dest);
                 fNew = gNew + hNew;
 
-                // If it isn’t on the open list, add it to 
+                // If it isnâ€™t on the open list, add it to 
                 // the open list. Make the current square 
                 // the parent of this square. Record the 
                 // f, g, and h costs of the square cell 
@@ -294,7 +307,7 @@ float* Astar::aStarSearch(int grid[][COL], Pair src, Pair dest)
                 hNew = calculateHValue(i + 1, j, dest);
                 fNew = gNew + hNew;
 
-                // If it isn’t on the open list, add it to 
+                // If it isnâ€™t on the open list, add it to 
                 // the open list. Make the current square 
                 // the parent of this square. Record the 
                 // f, g, and h costs of the square cell 
@@ -344,7 +357,7 @@ float* Astar::aStarSearch(int grid[][COL], Pair src, Pair dest)
                 hNew = calculateHValue(i, j + 1, dest);
                 fNew = gNew + hNew;
 
-                // If it isn’t on the open list, add it to 
+                // If it isnâ€™t on the open list, add it to 
                 // the open list. Make the current square 
                 // the parent of this square. Record the 
                 // f, g, and h costs of the square cell 
@@ -396,7 +409,7 @@ float* Astar::aStarSearch(int grid[][COL], Pair src, Pair dest)
                 hNew = calculateHValue(i, j - 1, dest);
                 fNew = gNew + hNew;
 
-                // If it isn’t on the open list, add it to 
+                // If it isnâ€™t on the open list, add it to 
                 // the open list. Make the current square 
                 // the parent of this square. Record the 
                 // f, g, and h costs of the square cell 
@@ -448,7 +461,7 @@ float* Astar::aStarSearch(int grid[][COL], Pair src, Pair dest)
                 hNew = calculateHValue(i - 1, j + 1, dest);
                 fNew = gNew + hNew;
 
-                // If it isn’t on the open list, add it to 
+                // If it isnâ€™t on the open list, add it to 
                 // the open list. Make the current square 
                 // the parent of this square. Record the 
                 // f, g, and h costs of the square cell 
@@ -500,7 +513,7 @@ float* Astar::aStarSearch(int grid[][COL], Pair src, Pair dest)
                 hNew = calculateHValue(i - 1, j - 1, dest);
                 fNew = gNew + hNew;
 
-                // If it isn’t on the open list, add it to 
+                // If it isnâ€™t on the open list, add it to 
                 // the open list. Make the current square 
                 // the parent of this square. Record the 
                 // f, g, and h costs of the square cell 
@@ -550,7 +563,7 @@ float* Astar::aStarSearch(int grid[][COL], Pair src, Pair dest)
                 hNew = calculateHValue(i + 1, j + 1, dest);
                 fNew = gNew + hNew;
 
-                // If it isn’t on the open list, add it to 
+                // If it isnâ€™t on the open list, add it to 
                 // the open list. Make the current square 
                 // the parent of this square. Record the 
                 // f, g, and h costs of the square cell 
@@ -602,7 +615,7 @@ float* Astar::aStarSearch(int grid[][COL], Pair src, Pair dest)
                 hNew = calculateHValue(i + 1, j - 1, dest);
                 fNew = gNew + hNew;
 
-                // If it isn’t on the open list, add it to 
+                // If it isnâ€™t on the open list, add it to 
                 // the open list. Make the current square 
                 // the parent of this square. Record the 
                 // f, g, and h costs of the square cell 
@@ -633,12 +646,11 @@ float* Astar::aStarSearch(int grid[][COL], Pair src, Pair dest)
     // there is no way to destination cell (due to blockages) 
     if (foundDest == false)
         printf("Failed to find the Destination Cell\n");
-
     return path;
 }
 
 // Main function to run A*
-float* Astar::runAStar( float start[2], float end[2])
+float* Astar::runAStar( float start[3], float end[3])
 {
     int grid[ROW][COL];
     Astar astar;
@@ -652,13 +664,13 @@ float* Astar::runAStar( float start[2], float end[2])
 //Convert a grid into size of the tank
 int       Astar::floatToInt(float floatX)
 {
-    return round((100 * (floatX + BZDBCache::worldSize)) / BZDBCache::worldSize);
+    return round((100 * (floatX + BZDBCache::worldSize)) / BZDBCache::tankRadius);
 }
 
 //Convert a grid into size of the tank
 float       Astar::intToFloat(int intX)
 {
-    return (((intX * BZDBCache::worldSize) / 100) - BZDBCache::worldSize);
+    return (((intX * BZDBCache::tankRadius) / 100) - BZDBCache::worldSize);
 }
 
 //Makes the grid of the map

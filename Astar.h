@@ -12,8 +12,8 @@
 #include "RegionPriorityQueue.h"
 #include "ServerLink.h"
 
-#define ROW 200
-#define COL 200
+#define ROW 186
+#define COL 186
 
 // Creating a shortcut for int, int pair type 
 typedef std::pair<int, int> Pair;
@@ -52,5 +52,6 @@ public:
     // A Function to find the shortest path between a given source cell to a destination cell according to A* Search Algorithm 
     float* aStarSearch(int grid[][COL], Pair src, Pair dest);
     // Main function to run A*
-    float* runAStar(float src[2], float dest[2]);
+    float* runAStar(float src[3], float dest[3]);
+    double Astar::calcBZH(float pos[3], float dest[3]);
 };
