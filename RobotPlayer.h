@@ -32,6 +32,7 @@
 
 //A* algorithm
 #include "Astar.h"
+#include "AStarNode.h"
 
 class RobotPlayer : public LocalPlayer
 {
@@ -47,14 +48,30 @@ public:
 
     void        restart(const float* pos, float azimuth);
     void        explodeTank();
+    void            RobotPlayer::doNothing(float dt);
+    void            RobotPlayer::dropFlag(float dt);
+    void            RobotPlayer::evade(float dt);
+    void            RobotPlayer::doAStar(float dt);
+    void            RobotPlayer::setShotTimer(float dt);
+    void            RobotPlayer::fireAndReset(float dt);
+    bool            RobotPlayer::amAlive(float dt);
+    bool            RobotPlayer::beingShot(float dt);
+    bool            RobotPlayer::gotFlag(float dt);
+    bool            RobotPlayer::isSticky(float dt);
+    bool            RobotPlayer::isTeam(float dt);
+    bool            RobotPlayer::isMyTeam(float dt);
+    bool            RobotPlayer::fireReady(float dt);
+    bool            RobotPlayer::timerDone(float dt);
+    bool            RobotPlayer::willMiss(float dt);
+    bool            RobotPlayer::isBuilding(float dt);
+    bool            RobotPlayer::isTeammate(float dt);
 
 private:
     int getCenterOfMass(float hoodSize, float teamCom[3]);
-    int getAlignment(float hoodSize, float teamAlign[3], float* avgAzi);
+    int getAlignment(float hoodSize, float teamAlign[3]);
     int getSeparation(float hoodSize, float teamSep[3]);
     void RobotPlayer::getMyBase(TeamColor teamColor, float location[3]);
     bool RobotPlayer::haveFlag(void);
-	//void aStarSearch(float grid[ROW][COL], Pair src, Pair dest);
     void RobotPlayer::findFlag(float location[3]);
     Player* findPlayer(PlayerId id);
     void        doUpdate(float dt);
@@ -82,6 +99,10 @@ private:
     float       timerForShot;
     bool        drivingForward;
     static std::vector<BzfRegion*>* obstacleList;
+    /* lines added by David Chin */
+    std::vector< AStarNode > AstarPath; // planner result path
+    AStarNode pathGoalNode;	// goal position for current planner result
+/* end of lines added by David Chin */
 };
 
 #endif // BZF_ROBOT_PLAYER_H

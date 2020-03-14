@@ -1,58 +1,56 @@
 #pragma once
 /* system interface headers */
 #include <vector>
-#include <utility>
+using std::vector;
+#include <set>
+using std::set;
+#include "AStarNode.h"
 
+#define indexShift (int)(floor(BZDBCache::worldSize / (2 * SCALE) + 1.5f))
+#define closedArraySize (2 * (int)(floor(BZDBCache::worldSize / (2 * SCALE) + 1.5f)) + 1)
+#define closedArrayFixedSize 200
 
-
-/* interface header */
-#include "LocalPlayer.h"
-
-/* local interface headers */
-#include "Region.h"
-#include "RegionPriorityQueue.h"
-#include "ServerLink.h"
-
-#define ROW 186
-#define COL 186
-
-// Creating a shortcut for int, int pair type 
-typedef std::pair<int, int> Pair;
-
-// Creating a shortcut for pair<int, pair<int, int>> type 
-typedef std::pair<double, std::pair<int, int>> pPair;
-
-// A structure to hold the neccesary parameters 
-struct cell
-{
-    // Row and Column index of its parent 
-    // Note that 0 <= i <= ROW-1 & 0 <= j <= COL-1 
-    int parent_i, parent_j;
-    // f = g + h 
-    double f, g, h;
+// define pless function as a binary operator that takes pointers
+// to any type and returns the comparison of the objects pointed to
+// and when the objects have the same value, compare the pointer values
+// This is so that multiset will only consider two elements to be the same
+// if and only if they have the same object values and point to the same object
+template<typename Type, typename Compare = std::less<Type> >
+struct pless : public std::binary_function<Type *, Type *, bool> {
+	bool operator()(const Type *x, const Type *y) const
+	{
+		return (Compare()(*x, *y) ? true : (Compare()(*y, *x) ? false : x<y));
+	}
 };
 
-class Astar
-{
-private:
-    // A Utility Function to check whether given cell (row, col) is a valid cell or not. 
-    bool isValid(int row, int col);
-    // A Utility Function to check whether the given cell is blocked or not 
-    bool isUnBlocked(int grid[][COL], int row, int col);
-    // A Utility Function to check whether destination cell has been reached or not
-    bool isDestination(int row, int col, Pair dest);
-    // A Utility Function to calculate the 'h' heuristics. 
-    double calculateHValue(int row, int col, Pair dest);
-    // A Utility Function to trace the path from the source to destination 
-    std::vector<RegionPoint> tracePath(cell cellDetails[][COL], Pair dest);
-    //Initialize the array for map
-    void initializeArray(int grid[ROW][COL]);
-    int floatToInt(float floatX);
-    float intToFloat(int intX);
-    std::vector<RegionPoint>    path;
+// Stores the local data needed for A* Search
+class AStarGraph {
 public:
-    // A Function to find the shortest path between a given source cell to a destination cell according to A* Search Algorithm 
-    std::vector<RegionPoint> aStarSearch(int grid[][COL], Pair src, Pair dest);
-    // Main function to run A*
-    std::vector<RegionPoint> runAStar(float src[3], float dest[3]);
+	AStarGraph::AStarGraph() {}
+	AStarGraph::AStarGraph(const float startPos[3], const float goalPos[3]);
+	static void		aStarSearch(const float startPos[3], const float goalPos[3], vector< AStarNode > & path);
+	inline AStarNode *		getRecord(AStarNode n) {
+		return &closedArray[n.getX() + indexShift][n.getY() + indexShift];
+	}
+	inline AStarNode *		getRecord(int x, int y) {
+		return &closedArray[x + indexShift][y + indexShift];
+	}
+
+private:
+	AStarNode * startNode;
+	AStarNode * goalNode;
+	//int indexShift;
+        static bool closedArrayInitP;
+	static AStarNode closedArray[closedArrayFixedSize][closedArrayFixedSize];
+	set<AStarNode *, pless<AStarNode> > openQueue;
+	void					startAStar(vector< AStarNode > & path);
+	vector<AStarNode *>		getSuccessors(AStarNode * node);
+	inline void AStarGraph::addToQueue(AStarNode * neighborNode, AStarNode * currentNode, double incrementalCost) {
+		neighborNode->setStatus(open);
+		neighborNode->setCostSoFar(currentNode->getCostSoFar() + incrementalCost);
+		neighborNode->setTotalCost(neighborNode->getCostSoFar() + neighborNode->getHeuristic(goalNode));
+		neighborNode->setPrevX(currentNode->getX());
+		neighborNode->setPrevY(currentNode->getY());
+		openQueue.insert(neighborNode);
+	}
 };
